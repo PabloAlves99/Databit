@@ -1,0 +1,52 @@
+# ----------------------------------------------------------------------
+# Configurações de Banco de Dados e Credenciais (CRÍTICO)
+# ----------------------------------------------------------------------
+# Ignora arquivos de configuração que contêm dados sensíveis e senhas
+config.php
+db/config.php
+DB/config.php
+.env
+.env.*
+*.key
+*.pem
+
+# ----------------------------------------------------------------------
+# Arquivos de Log e Cache (PHP / Apache / Servidor)
+# ----------------------------------------------------------------------
+*.log
+error_log
+access_log
+/logs/
+/cache/
+/tmp/
+
+# ----------------------------------------------------------------------
+# Arquivos do Sistema Operacional
+# ----------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+ehthumbs_vista.db
+[Tt]humbs.db
+[Dd]esktop.ini
+
+# ----------------------------------------------------------------------
+# Diretórios de IDEs e Editores de Código
+# ----------------------------------------------------------------------
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*~
+
+# ----------------------------------------------------------------------
+# Dependências de Gerenciadores de Pacotes (Composer / NPM)
+# ----------------------------------------------------------------------
+vendor/
+node_modules/
