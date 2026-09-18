@@ -1,0 +1,55 @@
+* {
+  font-size: 0.8rem;
+}
+
+body {
+  /* background-color: #b8c6ce; */
+  background-color: #095582;
+}
+
+/* Trava a altura de todos os cards em exatos 450px */
+.h-80 {
+  height: 300px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Garante que o corpo do card cresça para preencher os 450px */
+.h-80 .card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 0;
+}
+
+/* Força a div interna do gráfico a ocupar todo o espaço flexível */
+.h-80 .card-body > div {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Ajuste da tabela para preencher o card inteiro */
+.table-responsive {
+  height: 100%;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8f9fa;
+  z-index: 1;
+}
+
+/* Estilização da barra de rolagem */
+.card-body::-webkit-scrollbar,
+.table-responsive::-webkit-scrollbar {
+  width: 6px;
+}
+
+.card-body::-webkit-scrollbar-thumb,
+.table-responsive::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+  border-radius: 4px;
+}
