@@ -20,389 +20,311 @@ try {
 $data_inicio = isset($_GET['data_inicio']) ? $_GET['data_inicio'] : date('Y-m-01');
 $data_fim = isset($_GET['data_fim']) ? $_GET['data_fim'] : date('Y-m-d');
 
-$sql = "WITH DadosBase AS (
-	-- [ INICIO DA SUA CONSULTA ORIGINAL ]
-	SELECT
-		TB02115_CODIGO OS,
-		CASE
-			WHEN TB02115_PREVENTIVA = 'I' THEN 'Instalação'
-			WHEN TB02115_PREVENTIVA = 'N' THEN 'Normal'
-			WHEN TB02115_PREVENTIVA = 'D' THEN 'Desinstalação'
-			WHEN TB02115_PREVENTIVA = 'P' THEN 'Preventiva'
-			WHEN TB02115_PREVENTIVA = 'R' THEN 'Retorno / Recarga'
-			ELSE 'Aferição'
-		END Tipo,
-		CASE
-			TB02111_TIPOCONTR
-			WHEN 'A' THEN 'Avulso'
-			WHEN 'G' THEN 'Garantia'
-			WHEN 'M' THEN 'Manutenção'
-			WHEN 'L' THEN 'Locação'
-			ELSE TB02111_TIPOCONTR
-		END TipoContrato,
-		TB02115_CODEMP Codemp,
-		TB01007_NOME Empresa,
-		TB02115_DATA [Data],
-		SUBSTRING(CONVERT(VARCHAR(10), TB02115_DATA, 103), 1, 10) DataB,
-		SUBSTRING(CONVERT(VARCHAR(10), TB02115_DATA, 103), 7, 4) + '-' + SUBSTRING(CONVERT(VARCHAR(10), TB02115_DATA, 103), 4, 2) AnoMes,
-		SUBSTRING(CONVERT(VARCHAR(10), TB02115_DTFECHA, 103), 7, 4) + '-' + SUBSTRING(CONVERT(VARCHAR(10), TB02115_DTFECHA, 103), 4, 2) AnoMesFechamento,
-		TB02115_CODCLI CodCli,
-		TB01008_NOME Cliente,
-		TB02115_CONTRATO Contrato,
-		TB02111_NOME Classificação,
-		TB02115_NUMSERIE Serie,
-		TB02112_PAT Patromônio,
-		TB01010_NOME Equipamento,
-		VW02095.TB02115_CODTEC CodTec,
-		ISNULL(
-			ISNULL(
-				CASE
-					WHEN TB02115_TIPOINTERV = 'I' THEN TECFECH.TB01024_NOME
-					ELSE PRESTFECH.TB01017_NOME
-				END,
-				VW02095.TB01024_NOME
-			),
-			'OS sem técnico vinculado'
-		) Tecnico,
-		CALC_PREVISAO SLA,
-		CALC_RESTANTE Previsao,
-		CASE
-			WHEN CALC_RESTANTE < 0 THEN 1
-			ELSE 0
-		END SLA_Excedido,
-		CAST(TB02115_DTFECHA as date) DataFechamento,
-		TB01073_NOME [Status],
-		CAST(
-			SUBSTRING(
-				CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-				7,
-				7
-			) + '-' + SUBSTRING(
-				CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-				4,
-				2
-			) + '-' + SUBSTRING(
-				CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-				1,
-				2
-			) + ' ' + dbo.TB02122.TB02122_HORAINI + ':00' as datetime
-		) DataHoraIniTIME,
-		CAST(
-			SUBSTRING(
-				CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-				7,
-				7
-			) + '-' + SUBSTRING(
-				CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-				4,
-				2
-			) + '-' + SUBSTRING(
-				CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-				1,
-				2
-			) + ' ' + dbo.TB02122.TB02122_HORAFIM + ':00' as datetime
-		) DataHoraFimTIME,
-		CONVERT(
-			VARCHAR(20),
-			DATEDIFF(
-				MI,
-				CAST(
-					SUBSTRING(
-						CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-						7,
-						7
-					) + '-' + SUBSTRING(
-						CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-						4,
-						2
-					) + '-' + SUBSTRING(
-						CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-						1,
-						2
-					) + ' ' + dbo.TB02122.TB02122_HORAINI + ':00' as datetime
-				),
-				CAST(
-					SUBSTRING(
-						CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-						7,
-						7
-					) + '-' + SUBSTRING(
-						CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-						4,
-						2
-					) + '-' + SUBSTRING(
-						CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-						1,
-						2
-					) + ' ' + dbo.TB02122.TB02122_HORAFIM + ':00' as datetime
-				)
-			) / 60
-		) + ':' + RIGHT(
-			REPLICATE('0', 2) + CONVERT(
-				VARCHAR(10),
-				DATEDIFF(
-					MI,
-					CAST(
-						SUBSTRING(
-							CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-							7,
-							7
-						) + '-' + SUBSTRING(
-							CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-							4,
-							2
-						) + '-' + SUBSTRING(
-							CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-							1,
-							2
-						) + ' ' + dbo.TB02122.TB02122_HORAINI + ':00' as datetime
-					),
-					CAST(
-						SUBSTRING(
-							CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-							7,
-							7
-						) + '-' + SUBSTRING(
-							CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-							4,
-							2
-						) + '-' + SUBSTRING(
-							CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-							1,
-							2
-						) + ' ' + dbo.TB02122.TB02122_HORAFIM + ':00' as datetime
-					)
-				) % 60
-			),
-			2
-		) TesteProduzido,
-		DATEDIFF(
-			MI,
-			CAST(
-				SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					7,
-					7
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					4,
-					2
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					1,
-					2
-				) + ' ' + dbo.TB02122.TB02122_HORAINI + ':00' as datetime
-			),
-			CAST(
-				SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					7,
-					7
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					4,
-					2
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					1,
-					2
-				) + ' ' + dbo.TB02122.TB02122_HORAFIM + ':00' as datetime
-			)
-		) ProdSegundos,
-		TB02112_HORAS SLA_Contrato,
-		SERV.TOTVALOR ValorServicos,
-		ValorPecasTrocadas.CUSTO ValorPecasTrocadas,
-		CASE
-			WHEN TB02115_REINCIDENCIA = 'S' THEN 1
-			ELSE 0
-		END Reincidência,
-		CASE
-			WHEN DATEDIFF(D, (DT.DT), VW02095.TB02115_DATA) <= 30 THEN 1
-			ELSE 0
-		END Retorno,
-		VW02095.TB02122_CODIGO CodFech,
-		TB02112_CIDADE Cidade,
-		TB02112_ESTADO Estado,
-		VW02095.TB02176_NOME [Site],
-		VW02095.TB02177_NOME Departamento,
-		CAST(
-			ISNULL(dbo.TB02122.TB02122_KMFINAL, 0) - ISNULL(dbo.TB02122.TB02122_KMINICIAL, 0) as numeric(11, 3)
-		) KMSaldo,
-		CAST(
-			CASE
-				WHEN ISNULL(dbo.TB02122.TB02122_KMFINAL, 0) - ISNULL(dbo.TB02122.TB02122_KMINICIAL, 0) = 0 THEN 0
-				ELSE ISNULL(dbo.TB02122.TB02122_KMFINAL, 0) - ISNULL(dbo.TB02122.TB02122_KMINICIAL, 0) * 0.028
-			END as int
-		) TempoDeslocSeg,
-		dbo.TB02122.TB02122_PLACA Placa,
-		Defeito.NOME Defeito,
-		ISNULL(TB02122.TB02122_CONTADOR, 0) MedidorPB,
-		ISNULL(TB02122.TB02122_CONTADORC, 0) MedidorCor,
-		ISNULL(TB02122.TB02122_CONTADORGF, 0) MedidorA3PB,
-		ISNULL(TB02122.TB02122_CONTADORGFC, 0) MedidorA3Cor,
-		ISNULL(TB02122.TB02122_CONTADORDG, 0) MedidorA3DG,
-		TB01055_NOME CondIntervencao,
-		1 Qtde,
-		ISNULL(
-			CAST(TECFECH.TB01024_OBS as varchar(20)),
-			'Sem equipe no cadastro'
-		) Equipe,
-		ISNULL(prodseg.prodseg, 0) TempoPontoSeg,
-		DATEDIFF(
-			SS,
-			TB02115_DATA,
-			CAST(
-				SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					7,
-					7
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					4,
-					2
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					1,
-					2
-				) + ' ' + dbo.TB02122.TB02122_HORAINI + ':00' as datetime
-			)
-		) RespSlaSeg,
-		DATEDIFF(
-			SS,
-			TB02115_DATA,
-			CAST(
-				SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					7,
-					7
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					4,
-					2
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					1,
-					2
-				) + ' ' + dbo.TB02122.TB02122_HORAFIM + ':00' as datetime
-			)
-		) RespTecSlaSeg,
-		DATEDIFF(
-			SS,
-			CAST(
-				SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					7,
-					7
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					4,
-					2
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAINI, 103),
-					1,
-					2
-				) + ' ' + dbo.TB02122.TB02122_HORAINI + ':00' as datetime
-			),
-			CAST(
-				SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					7,
-					7
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					4,
-					2
-				) + '-' + SUBSTRING(
-					CONVERT(VARCHAR(10), dbo.TB02122.TB02122_DATAFIM, 103),
-					1,
-					2
-				) + ' ' + dbo.TB02122.TB02122_HORAFIM + ':00' as datetime
-			)
-		) RespMediaTec
-	FROM
-		VW02095
-		LEFT JOIN TB02122 ON dbo.TB02122.TB02122_NUMOS = VW02095.TB02115_CODIGO
-		AND dbo.TB02122.TB02122_CODCLI = VW02095.TB02115_CODCLI
-		AND dbo.TB02122.TB02122_CONTRATO = VW02095.TB02115_CONTRATO
-		AND dbo.TB02122.TB02122_NUMSERIE = VW02095.TB02115_NUMSERIE
-		LEFT JOIN TB01024 AS TECFECH ON TECFECH.TB01024_CODIGO = dbo.TB02122.TB02122_CODTEC
-		LEFT JOIN TB01017 AS PRESTFECH ON PRESTFECH.TB01017_CODIGO = dbo.TB02122.TB02122_PREST
-		OUTER APPLY (
-			SELECT
-				ISNULL(SUM(TB02125_TOTVALOR), 0) TOTVALOR
-			FROM
-				TB02125
-			WHERE
-				TB02125_CODIGO = VW02095.TB02122_CODIGO
-		) SERV
-		OUTER APPLY (
-			SELECT
-				ISNULL(SUM(TB02124_CUSTO), 0) CUSTO
-			FROM
-				TB02124
-			WHERE
-				TB02124_CODIGO = VW02095.TB02122_CODIGO
-		) ValorPecasTrocadas
-		OUTER APPLY (
-			SELECT
-				TOP 1 dbo.TB02115.TB02115_DATA DT
-			FROM
-				TB02115
-			WHERE
-				dbo.TB02115.TB02115_NUMSERIE = VW02095.TB02115_NUMSERIE
-				AND CAST(dbo.TB02115.TB02115_CODIGO as int) < CAST(VW02095.TB02115_CODIGO as int)
-			ORDER BY
-				dbo.TB02115.TB02115_DATA DESC
-		) DT
-		OUTER APPLY (
-			SELECT
-				TOP 1 TB01048_NOME NOME
-			FROM
-				TB01048
-				LEFT JOIN TB02116 ON TB02116_DEFEITO = TB01048_CODIGO
-			WHERE
-				TB02116_CODIGO = VW02095.TB02115_CODIGO
-		) Defeito
-		OUTER APPLY (
-			SELECT
-				prodseg
-			FROM
-				BM_PRODTEC
-			WHERE
-				[data] = cast(VW02095.TB02115_DATA as date)
-				AND codtec = VW02095.TB02115_CODTEC
-		) prodseg
-	WHERE
-		TB02115_situacao = 'A'
-		AND TB02115_DTFECHA IS NOT NULL
-		AND CAST(TB02115_DTFECHA as date) BETWEEN :dt_inicio
-		AND :dt_fim
-) -- INCLUI TODAS AS COLUNAS DOS FILTROS AQUI
-SELECT
-	Tecnico,
-	OS,
-	AnoMesFechamento AS AnoMes,
-	CAST(DataFechamento as varchar(10)) AS DataB,
-	Tipo,
-	CodCli,
-	Cliente,
-	Empresa,
-	TipoContrato,
-	Equipamento,
-	Cidade,
-	Defeito,
-	ISNULL(SLA_Excedido, 0) AS SLA_Excedido,
-	ISNULL(ProdSegundos, 0) AS ProdSegundos,
-	ISNULL(TempoDeslocSeg, 0) AS TempoDeslocSeg,
-	ISNULL(ValorPecasTrocadas, 0) AS ValorPecasTrocadas,
-	ISNULL(Reincidência, 0) AS Reincidencia,
-	ISNULL(Retorno, 0) AS Retorno,
-	ISNULL(KMSaldo, 0) AS KMSaldo
-FROM
-	DadosBase
-ORDER BY
-	Tecnico,
-	OS;
+$sql = " SELECT
+    ISNULL(
+        ISNULL(
+            CASE
+                WHEN dbo.TB02115.TB02115_TIPOINTERV = 'I' THEN TECFECH.TB01024_NOME
+                ELSE PRESTFECH.TB01017_NOME
+            END,
+            dbo.TB01024.TB01024_NOME
+        ),
+        'OS sem técnico vinculado'
+    ) AS Tecnico,
+
+    dbo.TB02115.TB02115_CODIGO AS OS,
+
+    SUBSTRING(CONVERT(VARCHAR(10), dbo.TB02115.TB02115_DTFECHA, 103), 7, 4) + '-' + SUBSTRING(CONVERT(VARCHAR(10), dbo.TB02115.TB02115_DTFECHA, 103), 4, 2) AS AnoMes,
+
+    CAST(CAST(dbo.TB02115.TB02115_DTFECHA AS date) AS varchar(10)) AS DataB,
+    CAST(dbo.TB02115.TB02115_DTFECHA AS date) AS DataFechamento,
+
+    CASE
+        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'I' THEN 'Instalação'
+        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'N' THEN 'Normal'
+        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'D' THEN 'Desinstalação'
+        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'P' THEN 'Preventiva'
+        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'R' THEN 'Retorno / Recarga'
+        ELSE 'Aferição'
+    END AS Tipo,
+
+    dbo.TB02115.TB02115_CODCLI AS CodCli,
+
+    CASE
+        WHEN dbo.TB02115.TB02115_ORIGEM IN ('C', 'B') THEN dbo.TB01008.TB01008_NOME
+        ELSE 'EQUIPAMENTO INTERNO'
+    END AS Cliente,
+
+    dbo.TB01007.TB01007_NOME AS Empresa,
+
+    CASE
+        CASE
+            WHEN dbo.TB02115.TB02115_ORIGEM = 'C' THEN dbo.TB02111.TB02111_TIPOCONTR
+            WHEN dbo.TB02115.TB02115_ORIGEM = 'B' THEN 'B'
+            ELSE 'I'
+        END
+        WHEN 'A' THEN 'Avulso'
+        WHEN 'G' THEN 'Garantia'
+        WHEN 'M' THEN 'Manutenção'
+        WHEN 'L' THEN 'Locação'
+        ELSE
+            CASE
+                WHEN dbo.TB02115.TB02115_ORIGEM = 'C' THEN dbo.TB02111.TB02111_TIPOCONTR
+                WHEN dbo.TB02115.TB02115_ORIGEM = 'B' THEN 'B'
+                ELSE 'I'
+            END
+    END AS TipoContrato,
+
+    dbo.TB01010.TB01010_NOME AS Equipamento,
+
+    CASE
+        WHEN dbo.TB02115.TB02115_ORIGEM = 'C' THEN dbo.TB02112.TB02112_CIDADE
+        ELSE dbo.TB00012.TB00012_CIDADE
+    END AS Cidade,
+
+    Defeito.NOME AS Defeito,
+
+    ISNULL(
+        CASE
+            WHEN FT02020.CALC_RESTANTE < 0 THEN 1
+            ELSE 0
+        END,
+        0
+    ) AS SLA_Excedido,
+
+    ISNULL(
+        DATEDIFF(
+            MI,
+            CAST(
+                SUBSTRING(CONVERT(VARCHAR(10), TB02122_DADOS.TB02122_DATAINI, 103), 7, 7) + '-' +
+                SUBSTRING(CONVERT(VARCHAR(10), TB02122_DADOS.TB02122_DATAINI, 103), 4, 2) + '-' +
+                SUBSTRING(CONVERT(VARCHAR(10), TB02122_DADOS.TB02122_DATAINI, 103), 1, 2) + ' ' +
+                TB02122_DADOS.TB02122_HORAINI + ':00' AS datetime
+            ),
+            CAST(
+                SUBSTRING(CONVERT(VARCHAR(10), TB02122_DADOS.TB02122_DATAFIM, 103), 7, 7) + '-' +
+                SUBSTRING(CONVERT(VARCHAR(10), TB02122_DADOS.TB02122_DATAFIM, 103), 4, 2) + '-' +
+                SUBSTRING(CONVERT(VARCHAR(10), TB02122_DADOS.TB02122_DATAFIM, 103), 1, 2) + ' ' +
+                TB02122_DADOS.TB02122_HORAFIM + ':00' AS datetime
+            )
+        ),
+        0
+    ) AS ProdSegundos,
+
+    ISNULL(
+        CAST(
+            CASE
+                WHEN ISNULL(TB02122_DADOS.TB02122_KMFINAL, 0) - ISNULL(TB02122_DADOS.TB02122_KMINICIAL, 0) = 0 THEN 0
+                ELSE ISNULL(TB02122_DADOS.TB02122_KMFINAL, 0) - ISNULL(TB02122_DADOS.TB02122_KMINICIAL, 0) * 0.028
+            END AS int
+        ),
+        0
+    ) AS TempoDeslocSeg,
+
+    ISNULL(ValorPecasTrocadas.CUSTO, 0) AS ValorPecasTrocadas,
+
+    ISNULL(
+        CASE
+            WHEN dbo.TB02115.TB02115_REINCIDENCIA = 'S' THEN 1
+            ELSE 0
+        END,
+        0
+    ) AS Reincidencia,
+
+    ISNULL(
+        CASE
+            WHEN DATEDIFF(D, (DT.DT), dbo.TB02115.TB02115_DATA) <= 30 THEN 1
+            ELSE 0
+        END,
+        0
+    ) AS Retorno,
+
+    ISNULL(
+        CAST(
+            ISNULL(TB02122_DADOS.TB02122_KMFINAL, 0) - ISNULL(TB02122_DADOS.TB02122_KMINICIAL, 0) AS numeric(11, 3)
+        ),
+        0
+    ) AS KMSaldo
+
+FROM dbo.TB02115
+    LEFT JOIN dbo.TB02112 ON dbo.TB02115.TB02115_CONTRATO = dbo.TB02112.TB02112_CODIGO
+        AND dbo.TB02115.TB02115_PRODUTO = dbo.TB02112.TB02112_PRODUTO
+        AND dbo.TB02115.TB02115_NUMSERIE = dbo.TB02112.TB02112_NUMSERIE
+    LEFT JOIN dbo.TB01008 ON dbo.TB02115.TB02115_CODCLI = dbo.TB01008.TB01008_CODIGO
+    LEFT JOIN dbo.TB01010 ON dbo.TB02115.TB02115_PRODUTO = dbo.TB01010.TB01010_CODIGO
+    LEFT JOIN dbo.TB01024 ON dbo.TB02115.TB02115_CODTEC = dbo.TB01024.TB01024_CODIGO
+    LEFT JOIN dbo.TB01024 AS TB01024_2 ON dbo.TB02112.TB02112_CODTEC = TB01024_2.TB01024_CODIGO
+    LEFT JOIN dbo.TB01017 ON dbo.TB02115.TB02115_PREST = dbo.TB01017.TB01017_CODIGO
+    LEFT JOIN dbo.TB01007 ON dbo.TB02115.TB02115_CODEMP = dbo.TB01007.TB01007_CODIGO
+    LEFT JOIN dbo.TB00012 ON dbo.TB00012.TB00012_CODIGO = dbo.TB02115.TB02115_CODEMP
+        AND TB00012_TABELA = 'TB01007'
+        AND TB00012_TIPO = '01'
+    LEFT JOIN dbo.TB02111 ON dbo.TB02111.TB02111_CODIGO = dbo.TB02115.TB02115_CONTRATO
+    LEFT JOIN dbo.TB01006 ON dbo.TB02111.TB02111_VEND = dbo.TB01006.TB01006_CODIGO
+    LEFT JOIN dbo.TB02122 ON dbo.TB02122.TB02122_NUMOS = dbo.TB02115.TB02115_CODIGO
+    LEFT JOIN dbo.TB01055 ON dbo.TB01055.TB01055_CODIGO = dbo.TB02122.TB02122_CONDICAO
+    LEFT JOIN dbo.TB01073 ON dbo.TB01073.TB01073_CODIGO = dbo.TB02115.TB02115_STATUS
+    LEFT JOIN dbo.TB01066 ON dbo.TB01066.TB01066_TECNICO = dbo.TB02115.TB02115_CODTEC
+    LEFT JOIN dbo.TB02176 ON dbo.TB02176.TB02176_CODIGO = dbo.TB02115.TB02115_CODSITE
+    LEFT JOIN dbo.TB02177 ON dbo.TB02177.TB02177_CODIGO = dbo.TB02115.TB02115_CODDEPTO
+    LEFT JOIN dbo.TB02054 ON dbo.TB02054.TB02054_CODEMP = dbo.TB02115.TB02115_CODEMP
+        AND dbo.TB02054.TB02054_NUMSERIE = dbo.TB02115.TB02115_NUMSERIE
+        AND dbo.TB02054.TB02054_PRODUTO = dbo.TB02115.TB02115_PRODUTO
+    LEFT JOIN dbo.TB01098 ON dbo.TB01098.TB01098_CIDADE = dbo.TB02115.TB02115_CIDADE
+        AND dbo.TB01098.TB01098_ESTADO = dbo.TB02115.TB02115_ESTADO
+    LEFT JOIN dbo.TB01097 ON dbo.TB01098.TB01098_AREA = dbo.TB01097.TB01097_CODIGO
+    LEFT JOIN dbo.TB00009 ON dbo.TB00009.TB00009_CODIGO = dbo.TB02112.TB02112_MODULO
+    LEFT JOIN dbo.TB01107 ON dbo.TB01107.TB01107_CODIGO = dbo.TB01008.TB01008_GRUPO
+    LEFT JOIN dbo.TB01003 ON dbo.TB01003.TB01003_CODIGO = dbo.TB02115.TB02115_LOCPPROD
+
+    LEFT JOIN (
+        SELECT
+            A.TB02018_CODIGO,
+            A.TB02018_DATA,
+            A.TB02018_OS,
+            A.ORDEM
+        FROM
+            (
+                SELECT
+                    TB18_1.TB02018_CODIGO,
+                    TB18_1.TB02018_DATA,
+                    TB18_1.TB02018_OS,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY TB18_1.TB02018_OS
+                        ORDER BY
+                            TB18_1.TB02018_CODIGO DESC
+                    ) AS ORDEM
+                FROM
+                    TB02018 AS TB18_1
+                WHERE
+                    TB18_1.TB02018_DATA = (
+                        SELECT
+                            MAX(TB18_2.TB02018_DATA)
+                        FROM
+                            TB02018 AS TB18_2
+                        WHERE
+                            TB18_2.TB02018_OS = TB18_1.TB02018_OS
+                    )
+            ) A
+        WHERE
+            A.ORDEM = 1
+    ) TB02018 ON TB02018.TB02018_OS = dbo.TB02115.TB02115_CODIGO
+
+    LEFT JOIN (
+        SELECT
+            A.TB02021_CODIGO,
+            A.TB02021_DATA,
+            A.TB02021_OS,
+            A.ORDEM
+        FROM
+            (
+                SELECT
+                    TB18_1.TB02021_CODIGO,
+                    TB18_1.TB02021_DATA,
+                    TB18_1.TB02021_OS,
+                    ROW_NUMBER() OVER (
+                        PARTITION BY TB18_1.TB02021_OS
+                        ORDER BY
+                            TB18_1.TB02021_CODIGO DESC
+                    ) AS ORDEM
+                FROM
+                    TB02021 AS TB18_1
+                WHERE
+                    TB18_1.TB02021_DATA = (
+                        SELECT
+                            MAX(TB18_2.TB02021_DATA)
+                        FROM
+                            TB02021 AS TB18_2
+                        WHERE
+                            TB18_2.TB02021_OS = TB18_1.TB02021_OS
+                    )
+            ) A
+        WHERE
+            A.ORDEM = 1
+    ) TB02021 ON TB02021.TB02021_OS = dbo.TB02115.TB02115_CODIGO
+
+    OUTER APPLY dbo.FT02020(
+        dbo.TB02115.TB02115_CODIGO,
+        dbo.TB02115.TB02115_PREVENTIVA,
+        dbo.TB02115.TB02115_DATA,
+        dbo.TB02115.TB02115_DTFECHA,
+        TB01008_HORAS,
+        CASE
+            WHEN dbo.TB02115.TB02115_ORIGEM = 'C' THEN dbo.TB02111.TB02111_TIPOCONTR
+            WHEN dbo.TB02115.TB02115_ORIGEM = 'B' THEN 'B'
+            ELSE 'I'
+        END,
+        CASE
+            WHEN dbo.TB02115.TB02115_ORIGEM = 'C' THEN dbo.TB02111.TB02111_CONTROLESLA
+            ELSE NULL
+        END,
+        dbo.TB02112.TB02112_HORAS,
+        dbo.TB02112.TB02112_TIPOHORAS,
+        dbo.TB02112.TB02112_TIPOSLA,
+        dbo.TB02112.TB02112_CODSITE,
+        'A'
+    ) AS FT02020
+
+    LEFT JOIN dbo.TB02122 AS TB02122_DADOS ON TB02122_DADOS.TB02122_NUMOS = dbo.TB02115.TB02115_CODIGO
+        AND TB02122_DADOS.TB02122_CODCLI = dbo.TB02115.TB02115_CODCLI
+        AND TB02122_DADOS.TB02122_CONTRATO = dbo.TB02115.TB02115_CONTRATO
+        AND TB02122_DADOS.TB02122_NUMSERIE = dbo.TB02115.TB02115_NUMSERIE
+    LEFT JOIN dbo.TB01024 AS TECFECH ON TECFECH.TB01024_CODIGO = TB02122_DADOS.TB02122_CODTEC
+    LEFT JOIN dbo.TB01017 AS PRESTFECH ON PRESTFECH.TB01017_CODIGO = TB02122_DADOS.TB02122_PREST
+
+    OUTER APPLY (
+        SELECT
+            ISNULL(SUM(TB02125_TOTVALOR), 0) AS TOTVALOR
+        FROM
+            dbo.TB02125
+        WHERE
+            TB02125_CODIGO = dbo.TB02122.TB02122_CODIGO
+    ) AS SERV
+
+    OUTER APPLY (
+        SELECT
+            ISNULL(SUM(TB02124_CUSTO), 0) AS CUSTO
+        FROM
+            dbo.TB02124
+        WHERE
+            TB02124_CODIGO = dbo.TB02122.TB02122_CODIGO
+    ) AS ValorPecasTrocadas
+
+    OUTER APPLY (
+        SELECT
+            TOP 1 TB02115_ANT.TB02115_DATA AS DT
+        FROM
+            dbo.TB02115 AS TB02115_ANT
+        WHERE
+            TB02115_ANT.TB02115_NUMSERIE = dbo.TB02115.TB02115_NUMSERIE
+            AND CAST(TB02115_ANT.TB02115_CODIGO AS int) < CAST(dbo.TB02115.TB02115_CODIGO AS int)
+        ORDER BY
+            TB02115_ANT.TB02115_DATA DESC
+    ) AS DT
+
+    OUTER APPLY (
+        SELECT
+            TOP 1 TB01048_NOME AS NOME
+        FROM
+            dbo.TB01048
+            LEFT JOIN dbo.TB02116 ON TB02116_DEFEITO = TB01048_CODIGO
+        WHERE
+            TB02116_CODIGO = dbo.TB02115.TB02115_CODIGO
+    ) AS Defeito
+
+    OUTER APPLY (
+        SELECT
+            prodseg
+        FROM
+            dbo.BM_PRODTEC
+        WHERE
+            [data] = CAST(dbo.TB02115.TB02115_DATA AS date)
+            AND codtec = dbo.TB02115.TB02115_CODTEC
+    ) AS prodseg
+WHERE
+    dbo.TB02115.TB02115_SITUACAO = 'A'
+	AND dbo.TB02115.TB02115_DTFECHA IS NOT NULL
+	AND CAST(dbo.TB02115.TB02115_DTFECHA as date) BETWEEN :dt_inicio AND :dt_fim
 ";
 
 try {
