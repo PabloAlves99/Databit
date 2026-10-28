@@ -19,11 +19,11 @@ SELECT
     CAST(dbo.TB02115.TB02115_DTFECHA AS date) AS datafechamento,
 
     CASE
-        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'I' THEN 'Instalação'
-        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'N' THEN 'Normal'
-        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'D' THEN 'Desinstalação'
-        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'P' THEN 'Preventiva'
-        WHEN dbo.TB02115.TB02115_PREVENTIVA = 'R' THEN 'Retorno / Recarga'
+        WHEN UPPER(dbo.TB02115.TB02115_PREVENTIVA) = 'I' THEN 'Instalação'
+        WHEN UPPER(dbo.TB02115.TB02115_PREVENTIVA) = 'N' THEN 'Normal'
+        WHEN UPPER(dbo.TB02115.TB02115_PREVENTIVA) = 'D' THEN 'Desinstalação'
+        WHEN UPPER(dbo.TB02115.TB02115_PREVENTIVA) = 'P' THEN 'Preventiva'
+        WHEN UPPER(dbo.TB02115.TB02115_PREVENTIVA) = 'R' THEN 'Retorno / Recarga'
         ELSE 'Aferição'
     END AS tipo,
 
